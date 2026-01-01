@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cine Plus 🎬 | Tráilers Continuos</title>
+
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-4T4M9VEHJY"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-4T4M9VEHJY');
+</script>
+
+<!-- Google AdSense -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3623005145407316" crossorigin="anonymous"></script>
+
+<style>
+:root {--rojo:#e50914}
+body {margin:0;background:#0b0b0b;color:#fff;font-family:Arial,Helvetica,sans-serif;overflow-x:hidden;}
+header {background:#111;padding:15px;display:flex;align-items:center;gap:10px;}
+.logo {color:var(--rojo);font-size:24px;font-weight:bold;}
+input {flex:1;padding:10px;border:none;border-radius:6px;}
+section {padding:25px;}
+
+/* bienvenida */
+#welcome{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:2000;animation:fadeOut 1s ease 4s forwards;}
+#welcome h1{color:var(--rojo);font-size:42px;margin:0;}
+#welcome p{color:#ccc;margin-top:10px;font-size:18px;}
+@keyframes fadeOut{to{opacity:0;visibility:hidden;}}
+
+/* grid */
+#trailers{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;}
+.card{background:#1c1c1c;border-radius:10px;overflow:hidden;cursor:pointer;transition:.3s;}
+.card:hover{transform:scale(1.05);}
+.card img{width:100%;height:280px;object-fit:cover;}
+.card p{text-align:center;padding:8px;font-size:14px;}
+
+/* modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:1500;justify-content:center;align-items:center;flex-direction:column;}
+iframe{width:90%;max-width:900px;height:500px;border:none;border-radius:10px;}
+.close{position:absolute;top:15px;right:25px;font-size:32px;cursor:pointer;color:#fff;}
+.controls{margin-top:12px;display:flex;gap:12px;}
+.controls button{padding:9px 20px;border:none;border-radius:6px;font-size:15px;cursor:pointer;background:var(--rojo);color:#fff;}
+.adsense-box{text-align:center;margin:20px 0;}
+</style>
+</head>
+
+<body>
+<div id="welcome">
+  <h1>🎬 Bienvenido a Cine Plus</h1>
+  <p>Tráilers nuevos con reproducción automática</p>
+</div>
+
+<header>
+  <div class="logo">🎬 Cine Plus</div>
+  <input id="search" placeholder="Buscar películas...">
+</header>
+
+<section>
+  <h2>🎥 Tráilers recientes</h2>
+  <div id="trailers"></div>
+</section>
+
+<div class="modal" id="modal">
+  <span class="close" onclick="cerrarModal()">×</span>
+  <iframe id="player" allow="autoplay;fullscreen;encrypted-media"></iframe>
+  <div class="controls">
+    <button onclick="anteriorTrailer()">⏮ Anterior</button>
+    <button onclick="siguienteTrailer(true)">⏭ Siguiente</button>
+  </div>
+</div>
+
+<script>
+const TMDB_KEY="a75df45f5957e88b88043e6e9558b941";
+const TMDB_URL="https://api.themoviedb.org/3";
+let pagina=1, cargando=false;
+let lista=[], indice=0, cache={};
+
+/* === cargar trailers (scroll infinito) === */
+async function cargarTrailers(){
+ if(cargando) return;
+ cargando=true;
+ const res=await fetch(`${TMDB_URL}/movie/now_playing?api_key=${TMDB_KEY}&language=es-ES&page=${pagina}`);
+ const data=await res.json();
+ const grid=document.getElementById("trailers");
+ let contador=0;
+ for(const peli of data.results){
+   if(!peli.poster_path) continue;
+   lista.push(peli.id);
+   const card=document.createElement("div");
+   card.className="card";
+   card.innerHTML=`<img src="https://image.tmdb.org/t/p/w500${peli.poster_path}"><p>${peli.title}</p>`;
+   card.onclick=()=>reproducirPorIndice(lista.indexOf(peli.id));
+   grid.appendChild(card);
+   contador++;
+   if(contador%2===0){ // anuncio cada 2
+     const ad=document.createElement("div");
+     ad.className="adsense-box";
+     ad.innerHTML=`<ins class="adsbygoogle"
+       style="display:block;text-align:center;"
+       data-ad-client="ca-pub-3623005145407316"
+       data-ad-slot="4103131320"
+       data-ad-format="fluid"
+       data-ad-layout="in-article"></ins>`;
+     grid.appendChild(ad);
+     (adsbygoogle=window.adsbygoogle||[]).push({});
+   }
+ }
+ pagina++; cargando=false;
+}
+
+/* === reproducir === */
+async function reproducirTrailer(id){
+ if(cache[id]) return abrirPlayer(cache[id]);
+ const r=await fetch(`${TMDB_URL}/movie/${id}/videos?api_key=${TMDB_KEY}&language=es-ES`);
+ const d=await r.json();
+ const t=d.results.find(v=>v.site==="YouTube"&&v.type==="Trailer");
+ if(!t){siguienteTrailer(true);return;}
+ const url=`https://www.youtube.com/embed/${t.key}?autoplay=1&mute=1&rel=0`;
+ cache[id]=url; abrirPlayer(url);
+}
+
+/* === abrir y pasar automáticamente === */
+function abrirPlayer(url){
+ const player=document.getElementById("player");
+ player.src=url;
+ document.getElementById("modal").style.display="flex";
+ // duración simulada: 2 min promedio
+ setTimeout(()=>{siguienteTrailer(true);},120000);
+}
+
+function reproducirPorIndice(i){indice=i;reproducirTrailer(lista[i]);}
+function siguienteTrailer(auto=false){
+ indice++;
+ if(indice>=lista.length){pagina++;cargarTrailers().then(()=>reproducirTrailer(lista[0]));}
+ else{reproducirTrailer(lista[indice]);}
+}
+function anteriorTrailer(){if(indice>0){indice--;reproducirTrailer(lista[indice]);}}
+function cerrarModal(){document.getElementById("modal").style.display="none";document.getElementById("player").src="";}
+
+/* === scroll infinito === */
+window.addEventListener("scroll",()=>{if(window.innerHeight+window.scrollY>=document.body.offsetHeight-300)cargarTrailers();});
+
+/* === inicio automático === */
+window.addEventListener("load",async()=>{
+ await cargarTrailers();
+ setTimeout(()=>{
+   document.getElementById("welcome").style.display="none";
+   if(lista.length>0) reproducirTrailer(lista[0]);
+ },4000);
+});
+</script>
+</body>
+</html>
